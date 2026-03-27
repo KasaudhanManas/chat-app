@@ -17,16 +17,21 @@ const app = express();
 const server = http.createServer(app);
 
 // Socket.io server with CORS
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'https://kasaudhanmanas.github.io',
+];
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
     credentials: true,
   },
 });
 
 // ── Middleware ──────────────────────────────────────────────
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 app.use(express.json());
 
 // ── REST API Routes ─────────────────────────────────────────
