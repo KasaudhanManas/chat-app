@@ -48,7 +48,7 @@ function CreateRoomModal({ onClose, onCreated }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        <p className="modal-desc">Rooms are where conversations happen. Give it a clear name.</p>
+        <p className="modal-desc">Rooms are where conversations happen. Give it a clear, memorable name.</p>
 
         {error && <div className="modal-error">⚠ {error}</div>}
 
@@ -61,7 +61,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                 ref={inputRef}
                 className="modal-input"
                 type="text"
-                placeholder="e.g. general, random, dev-chat"
+                placeholder="e.g. general, dev-chat, random"
                 value={name}
                 onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                 maxLength={30}
@@ -71,7 +71,9 @@ function CreateRoomModal({ onClose, onCreated }) {
           </div>
 
           <div className="modal-field">
-            <label className="modal-label">Description <span className="optional">(optional)</span></label>
+            <label className="modal-label">
+              Description <span className="optional">(optional)</span>
+            </label>
             <textarea
               className="modal-textarea"
               placeholder="What is this room about?"
@@ -145,7 +147,7 @@ export default function Sidebar({ activeRoom, onRoomSelect }) {
         <div className="sidebar-header">
           <div className="sidebar-logo">💬</div>
           <div className="sidebar-title">ChatFlow</div>
-          <div className="sidebar-conn" title={connected ? 'Connected' : 'Disconnected'}>
+          <div className="sidebar-conn" title={connected ? 'Connected to server' : 'Disconnected'}>
             <div className={`conn-dot ${connected ? 'connected' : ''}`} />
             <span>{connected ? 'Live' : 'Offline'}</span>
           </div>
@@ -169,19 +171,19 @@ export default function Sidebar({ activeRoom, onRoomSelect }) {
         <div className="sidebar-scroll">
           {/* Rooms Section */}
           <div className="sidebar-section-header">
-            <span>Rooms</span>
+            <span>Channels</span>
             <button
               className="sidebar-new-room-btn"
               onClick={() => setShowModal(true)}
               title="Create new room"
             >
-              <span>+</span>
+              +
             </button>
           </div>
 
           {filteredRooms.length === 0 && (
             <div className="sidebar-empty">
-              {search ? `No rooms matching "${search}"` : 'No rooms yet'}
+              {search ? `No rooms matching "${search}"` : 'No rooms yet — create one!'}
             </div>
           )}
 
@@ -203,7 +205,7 @@ export default function Sidebar({ activeRoom, onRoomSelect }) {
           ))}
 
           {/* Online Users */}
-          <div className="sidebar-section-header" style={{ marginTop: 12 }}>
+          <div className="sidebar-section-header" style={{ marginTop: 16 }}>
             <span>Online</span>
             <span className="online-count-badge">{onlineUsers.length}</span>
           </div>
@@ -216,7 +218,7 @@ export default function Sidebar({ activeRoom, onRoomSelect }) {
               </div>
               <div className={`online-user-name ${u.username === user?.username ? 'you' : ''}`}>
                 {u.username}
-                {u.username === user?.username && <span className="you-tag"> you</span>}
+                {u.username === user?.username && <span className="you-tag">you</span>}
               </div>
             </div>
           ))}
@@ -230,7 +232,7 @@ export default function Sidebar({ activeRoom, onRoomSelect }) {
             <div className="user-info-status">Online</div>
           </div>
           <button className="btn-logout" onClick={logout} title="Sign out">
-            ⎋ Out
+            Sign out
           </button>
         </div>
       </div>

@@ -15,7 +15,7 @@ const formatDate = (ts) => {
   yesterday.setDate(yesterday.getDate() - 1);
   if (d.toDateString() === today.toDateString()) return 'Today';
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 const getInitial = (name) => (name || '?')[0].toUpperCase();
@@ -33,6 +33,7 @@ const highlight = (text, query) => {
   );
 };
 
+/* ── Message Bubble ─────────────────────────────────────────────── */
 const MessageBubble = ({ msg, isOwn, searchQuery }) => (
   <div className={`msg-row ${isOwn ? 'own' : ''}`}>
     {!isOwn && <div className="msg-avatar">{getInitial(msg.sender?.username)}</div>}
@@ -47,6 +48,7 @@ const MessageBubble = ({ msg, isOwn, searchQuery }) => (
   </div>
 );
 
+/* ── Chat Panel ─────────────────────────────────────────────────── */
 export default function ChatPanel({ activeRoom }) {
   const { socket } = useSocket();
   const { user } = useAuth();
@@ -60,12 +62,13 @@ export default function ChatPanel({ activeRoom }) {
   const searchInputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isTypingRef = useRef(false);
+  const inputRef = useRef(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Load message history
+  /* Load message history */
   useEffect(() => {
     if (!activeRoom) { setMessages([]); return; }
     const fetchHistory = async () => {
@@ -86,7 +89,7 @@ export default function ChatPanel({ activeRoom }) {
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-  // Open search with keyboard shortcut Ctrl+F
+  /* Keyboard shortcuts */
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f' && activeRoom) {
@@ -103,23 +106,19 @@ export default function ChatPanel({ activeRoom }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [activeRoom]);
 
-  // Socket events
+  /* Socket events */
   useEffect(() => {
     if (!socket || !activeRoom) return;
 
     const onReceive = (msg) => setMessages((prev) => [...prev, msg]);
-
     const onUserJoined = ({ message }) =>
       setMessages((prev) => [...prev, { _id: Date.now(), type: 'system', content: message, createdAt: new Date() }]);
-
     const onUserLeft = ({ message }) =>
       setMessages((prev) => [...prev, { _id: Date.now() + 1, type: 'system', content: message, createdAt: new Date() }]);
-
     const onTyping = ({ username }) => {
       if (username === user?.username) return;
       setTypingUsers((prev) => prev.includes(username) ? prev : [...prev, username]);
     };
-
     const onStopTyping = ({ username }) =>
       setTypingUsers((prev) => prev.filter((u) => u !== username));
 
@@ -160,19 +159,19 @@ export default function ChatPanel({ activeRoom }) {
     clearTimeout(typingTimerRef.current);
     isTypingRef.current = false;
     socket.emit('typing_stop', { room: activeRoom });
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  // Filter + group by date
+  /* Filter + group by date */
   const filtered = messages.filter((m) =>
     m.type === 'system' ? true :
     !searchQuery || m.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group messages by date
   const grouped = filtered.reduce((acc, msg) => {
     const label = msg.type === 'system' ? null : formatDate(msg.createdAt);
     const last = acc[acc.length - 1];
@@ -188,35 +187,44 @@ export default function ChatPanel({ activeRoom }) {
     ? messages.filter((m) => m.type !== 'system' && m.content.toLowerCase().includes(searchQuery.toLowerCase())).length
     : 0;
 
-  if (!activeRoom) {
-    return (
-      <div className="no-room">
-        <div className="no-room-icon">💬</div>
-        <h2>Welcome to ChatFlow</h2>
-        <p>Select a room from the sidebar or create a new one to start chatting</p>
-        <div className="no-room-hint">💡 Press <kbd>Ctrl+F</kbd> in any room to search messages</div>
-      </div>
-    );
-  }
-
   const typingLabel =
     typingUsers.length === 1 ? `${typingUsers[0]} is typing`
     : typingUsers.length > 1 ? `${typingUsers.join(', ')} are typing`
     : '';
+
+  /* ── No Room Selected ─────────────────────────────────────────── */
+  if (!activeRoom) {
+    return (
+      <div className="no-room">
+        <div className="no-room-visual">
+          <div className="no-room-ring" />
+          <div className="no-room-ring" />
+          <div className="no-room-ring" />
+          <div className="no-room-icon">💬</div>
+        </div>
+        <h2>Welcome to ChatFlow</h2>
+        <p>Select a channel from the sidebar or create a new one to start a conversation.</p>
+        <div className="no-room-hint">
+          <span>💡</span>
+          Press <kbd>Ctrl+F</kbd> in any room to search messages
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-panel">
       {/* Header */}
       <div className="chat-header">
         <div className="chat-header-left">
-          <span className="chat-header-hash">#</span>
+          <div className="chat-header-hash">#</div>
           <span className="chat-header-title">{activeRoom}</span>
           <span className="chat-header-badge">Live</span>
         </div>
 
         <div className="chat-header-actions">
-          {/* Search toggle */}
           <button
+            id="search-btn"
             className={`chat-action-btn ${searchOpen ? 'active' : ''}`}
             onClick={() => {
               setSearchOpen((v) => !v);
@@ -230,8 +238,9 @@ export default function ChatPanel({ activeRoom }) {
           >
             🔍
           </button>
-
-          <span className="chat-header-desc">{messages.filter(m => m.type !== 'system').length} messages</span>
+          <span className="chat-header-desc">
+            {messages.filter((m) => m.type !== 'system').length} messages
+          </span>
         </div>
       </div>
 
@@ -243,7 +252,7 @@ export default function ChatPanel({ activeRoom }) {
             ref={searchInputRef}
             className="chat-search-input"
             type="text"
-            placeholder="Search messages in this room…"
+            placeholder="Search messages in this channel…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -265,8 +274,10 @@ export default function ChatPanel({ activeRoom }) {
       <div className="messages-container">
         {loading && (
           <div className="messages-empty">
-            <div className="spinner" style={{ width: 32, height: 32 }} />
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10 }}>Loading messages…</div>
+            <div className="spinner" style={{ width: 30, height: 30 }} />
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
+              Loading messages…
+            </div>
           </div>
         )}
 
@@ -282,7 +293,9 @@ export default function ChatPanel({ activeRoom }) {
               <>
                 <div className="messages-empty-icon">📭</div>
                 <div className="messages-empty-text">No messages yet</div>
-                <div className="messages-empty-sub">Be the first to say something in #{activeRoom}!</div>
+                <div className="messages-empty-sub">
+                  Be the first to say something in #{activeRoom}!
+                </div>
               </>
             )}
           </div>
@@ -323,6 +336,7 @@ export default function ChatPanel({ activeRoom }) {
             </>
           )}
         </div>
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -330,19 +344,22 @@ export default function ChatPanel({ activeRoom }) {
       <div className="message-input-area">
         <div className="message-input-wrapper">
           <textarea
+            ref={inputRef}
+            id="message-input"
             className="message-input"
             rows={1}
-            placeholder={`Message #${activeRoom}  •  Shift+Enter for new line`}
+            placeholder={`Message #${activeRoom}  ·  Shift+Enter for new line`}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
           />
         </div>
         <button
+          id="send-btn"
           className="btn-send"
           onClick={sendMessage}
           disabled={!input.trim()}
-          title="Send (Enter)"
+          title="Send message (Enter)"
         >
           ➤
         </button>
